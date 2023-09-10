@@ -4,20 +4,27 @@ import {
     text,
     primaryKey,
     integer,
+    uniqueIndex
 } from "drizzle-orm/pg-core";
 import type { AdapterAccount } from "@auth/core/adapters";
 
-export const users = pgTable("user", {
-    id: text("id").notNull().primaryKey(),
-    name: text("name"),
-    email: text("email").notNull(),
-    emailVerified: timestamp("emailVerified", { mode: "date" }),
-    image: text("image"),
-});
+export const users = pgTable("user",
+    {
+        id: text("id").notNull().primaryKey(),
+        name: text("name"),
+        email: text("email").notNull(),
+        emailVerified: timestamp("emailVerified", { mode: "date" }),
+        image: text("image"),
+        created_at: timestamp('created_at').notNull().defaultNow(),
+    },
+    user => ({
+        emailIndex: uniqueIndex('users_email_idx').on(user.email),
+    }));
 
 export const accounts = pgTable(
     "account",
     {
+        id: text("id").notNull().primaryKey(),
         userId: text("userId")
             .notNull()
             .references(() => users.id, { onDelete: "cascade" }),
@@ -31,14 +38,12 @@ export const accounts = pgTable(
         scope: text("scope"),
         id_token: text("id_token"),
         session_state: text("session_state"),
-    },
-    (account) => ({
-        compoundKey: primaryKey(account.provider, account.providerAccountId),
-    })
+    }
 );
 
 export const sessions = pgTable("session", {
-    sessionToken: text("sessionToken").notNull().primaryKey(),
+    id: text("id").notNull().primaryKey(),
+    sessionToken: text("sessionToken").notNull(),
     userId: text("userId")
         .notNull()
         .references(() => users.id, { onDelete: "cascade" }),
@@ -51,6 +56,7 @@ export const verificationTokens = pgTable(
         identifier: text("identifier").notNull(),
         token: text("token").notNull(),
         expires: timestamp("expires", { mode: "date" }).notNull(),
+        created_at: timestamp('created_at').notNull().defaultNow(),
     },
     (vt) => ({
         compoundKey: primaryKey(vt.identifier, vt.token),
